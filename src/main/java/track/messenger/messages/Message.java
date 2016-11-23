@@ -1,5 +1,7 @@
 package track.messenger.messages;
 
+import track.messenger.User;
+
 import java.io.Serializable;
 
 /**
@@ -11,6 +13,11 @@ public abstract class Message implements Serializable {
     private Long senderId;
     private Type type;
 
+    public Message(User sender) {
+        if(sender != null) {
+            this.senderId = sender.getId();
+        }
+    }
     public Long getId() {
         return id;
     }

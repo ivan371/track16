@@ -11,9 +11,8 @@ import java.util.Scanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import track.messenger.messages.Message;
-import track.messenger.messages.TextMessage;
-import track.messenger.messages.Type;
+import track.messenger.User;
+import track.messenger.messages.*;
 import track.messenger.net.Protocol;
 import track.messenger.net.ProtocolException;
 import track.messenger.net.StringProtocol;
@@ -37,6 +36,7 @@ public class MessengerClient {
     private Protocol protocol;
     private int port;
     private String host;
+    private User user;
 
     /**
      * С каждым сокетом связано 2 канала in/out
@@ -105,32 +105,112 @@ public class MessengerClient {
      */
     public void onMessage(Message msg) {
         log.info("Message received: {}", msg);
+        if (msg == null) {
+            return;
+        }
+
+        Type msgType = msg.getType();
+        switch (msgType) {
+            case MSG_INFO_RESULT:
+                InfoResultMessage selfInfoMessage = (InfoResultMessage) msg;
+                selfInfoMessage.setType(Type.MSG_INFO_RESULT);
+                break;
+            case MSG_STATUS:
+                StatusMessage statusMessage = (StatusMessage) msg;
+                statusMessage.setType(Type.MSG_STATUS);
+                System.out.println(statusMessage);
+                break;
+            case MSG_CHAT_HIST_RESULT:
+                ChatHistResultMessage histMessage = (ChatHistResultMessage) msg;
+                histMessage.setType(Type.MSG_CHAT_HIST_RESULT);
+                histMessage.getHistory().forEach(System.out::println);
+                break;
+            case MSG_CHAT_LIST_RESULT:
+                ChatListResultMessage listMessage = (ChatListResultMessage) msg;
+                listMessage.setType(Type.MSG_CHAT_LIST_RESULT);
+                String chats = listMessage.getChatIds().stream()
+                        .map(id -> id.toString() + " ")
+                        .reduce((first, second) -> first + second)
+                        .orElse("No Chats.");
+                System.out.println(chats);
+                break;
+            default:
+                System.out.println(this.getClass() + ": error in server");
+        }
     }
 
-    /**
-     * Обрабатывает входящую строку, полученную с консоли
-     * Формат строки можно посмотреть в вики проекта
-     */
+
     public void processInput(String line) throws IOException, ProtocolException {
         String[] tokens = line.split(" ");
         log.info("Tokens: {}", Arrays.toString(tokens));
         String cmdType = tokens[0];
         switch (cmdType) {
             case "/login":
-                // TODO: реализация
+                LoginMessage login = new LoginMessage();
+                login.setType(Type.MSG_LOGIN);
+                login.setUsername(tokens[1]);
+                login.setPassword(tokens[2]);
+                send(login);
                 break;
             case "/help":
-                // TODO: реализация
+                System.out.println("HELP:\n" +
+                        "/help - help.\n" +
+                        "/register [username] [password] - registration\n" +
+                        "/login [username] [password] - login.\n" +
+                        "/info - information.\n" +
+                        "/info [id] - information about user id.\n" +
+                        "/chat_list - list chats.\n" +
+                        "/chat_create [id1] [id2] ... - crate chat with users id1, id2...\n" +
+                        "/text [id] [text] - send message text to chat with id.\n" +
+                        "/chat_hist [id] - get messages from chat id.\n" +
+                        "/quit - quit."
+                );
                 break;
             case "/text":
-                // FIXME: пример реализации для простого текстового сообщения
                 TextMessage sendMessage = new TextMessage();
                 sendMessage.setType(Type.MSG_TEXT);
-                sendMessage.setText(tokens[1]);
+                sendMessage.setSenderId(user.getId());
+                sendMessage.setId(Long.valueOf(tokens[1]));
+                sendMessage.setText(tokens[2]);
                 send(sendMessage);
                 break;
-            // TODO: implement another types from wiki
-
+            case "/info":
+                InfoMessage info = new InfoMessage();
+                info.setType(Type.MSG_INFO);
+                info.setId(Long.valueOf(tokens[1]));
+                send(info);
+                break;
+            case "/chat_list":
+                ChatList chatlist = new ChatList();
+                chatlist.setType(Type.MSG_CHAT_LIST);
+                send(chatlist);
+                break;
+            case "/chat_create":
+                ChatCreate chatcreate = new ChatCreate();
+                chatcreate.setSenderId(user.getId());
+                chatcreate.setType(Type.MSG_CHAT_CREATE);
+                chatcreate.setIds(tokens);
+                send(chatcreate);
+                break;
+            case "/chat_history":
+                ChatHistory chathist = new ChatHistory();
+                chathist.setSenderId(user.getId());
+                chathist.setType(Type.MSG_CHAT_HIST);
+                chathist.setId(Long.valueOf(tokens[1]));
+                send(chathist);
+                break;
+            case "/quit":
+                Quit quit = new Quit(user);
+                quit.setType(Type.MSG_QUIT);
+                send(quit);
+                break;
+            case "/register":
+                Registration registration = new Registration();
+                registration.setType(Type.MSG_REGISTER);
+                registration.setUsername(tokens[1]);
+                registration.setPassword(tokens[2]);
+                send(registration);
+                break;
             default:
                 log.error("Invalid input: " + line);
         }
@@ -143,6 +223,10 @@ public class MessengerClient {
         log.info(msg.toString());
         out.write(protocol.encode(msg));
         out.flush(); // принудительно проталкиваем буфер с данными
+    }
+
+    public void close() {
+
     }
 
     public static void main(String[] args) throws Exception {
@@ -174,7 +258,7 @@ public class MessengerClient {
         } finally {
             if (client != null) {
                 // TODO
-//                client.close();
+                client.close();
             }
         }
     }

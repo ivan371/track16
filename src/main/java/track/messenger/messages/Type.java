@@ -8,6 +8,8 @@ public enum Type {
     MSG_LOGIN, // в ответ MSG_STATUS
     MSG_TEXT, // в ответ MSG_STATUS
     MSG_INFO, // в ответ MSG_INFO_RESULT
+    MSG_REGISTER,
+    MSG_QUIT,
     MSG_CHAT_LIST, // в ответ MSG_CHAT_LIST_RESULT,
     MSG_CHAT_CREATE, // в ответ MSG_STATUS
     MSG_CHAT_HIST, // в ответ MSG_CHAT_HIST_RESULT,

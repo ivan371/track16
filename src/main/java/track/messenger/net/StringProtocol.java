@@ -3,6 +3,8 @@ package track.messenger.net;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import track.messenger.User;
+import track.messenger.messages.LoginMessage;
 import track.messenger.messages.Message;
 import track.messenger.messages.TextMessage;
 import track.messenger.messages.Type;
@@ -15,6 +17,7 @@ public class StringProtocol implements Protocol {
     static Logger log = LoggerFactory.getLogger(StringProtocol.class);
 
     public static final String DELIMITER = ";";
+    private User user;
 
     @Override
     public Message decode(byte[] bytes) throws ProtocolException {
@@ -29,6 +32,12 @@ public class StringProtocol implements Protocol {
                 textMsg.setText(tokens[2]);
                 textMsg.setType(type);
                 return textMsg;
+            case MSG_LOGIN:
+                LoginMessage logMsg = new LoginMessage();
+                logMsg.setUsername(tokens[1]);
+                logMsg.setPassword(tokens[2]);
+                logMsg.setType(type);
+                return logMsg;
             default:
                 throw new ProtocolException("Invalid type: " + type);
         }
@@ -44,6 +53,12 @@ public class StringProtocol implements Protocol {
                 TextMessage sendMessage = (TextMessage) msg;
                 builder.append(String.valueOf(sendMessage.getSenderId())).append(DELIMITER);
                 builder.append(sendMessage.getText()).append(DELIMITER);
+                break;
+            case MSG_LOGIN:
+                LoginMessage loginMessage = (LoginMessage) msg;
+                builder.append(String.valueOf(loginMessage.getSenderId())).append(DELIMITER);
+                builder.append(loginMessage.getUsername()).append(DELIMITER);
+                builder.append(loginMessage.getPassword()).append(DELIMITER);
                 break;
             default:
                 throw new ProtocolException("Invalid type: " + type);
