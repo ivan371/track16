@@ -6,6 +6,7 @@ import track.messenger.messages.Message;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -15,14 +16,17 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class MessengerServer {
 
+    private static final int MAX_CLIENTS = 1000;
     private ServerSocket serverSocket;
-    private LinkedBlockingQueue<Session> sessions;
+    private ArrayBlockingQueue<Session> sessions;
     private int port;
     private int nthreads;
+    private boolean running;
 
     public void start() throws Exception{
+        running = true;
         serverSocket = null;
-        sessions = new LinkedBlockingQueue<>();
+        sessions = new ArrayBlockingQueue<Session>(MAX_CLIENTS);
         ExecutorService service = Executors.newFixedThreadPool(nthreads);
         try {
             serverSocket = new ServerSocket(port);
@@ -31,6 +35,7 @@ public class MessengerServer {
             while (true) {
                 Session session = sessions.take();
                 Message msg = session.getMessage();
+                System.out.println(msg);
             }
         } catch (IOException e) {
             System.out.println(e.toString());
@@ -52,10 +57,10 @@ public class MessengerServer {
     private void listen() {
         Thread listenerThread = new Thread(() -> {
             System.out.println("Listening...");
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && running) {
                 try {
                     Socket clientSocket = serverSocket.accept();
-                    sessions.put(new Session(clientSocket));
+                    sessions.add(new Session(clientSocket));
                 } catch (Exception e) {
                     System.out.println("listen: " + e.toString() + " error");
                     Thread.currentThread().interrupt();
@@ -64,5 +69,14 @@ public class MessengerServer {
         });
         listenerThread.setDaemon(true);
         listenerThread.start();
+    }
+
+    public boolean isrunning()
+    {
+        return running;
+    }
+
+    public void stop() {
+        running = false;
     }
 }
