@@ -37,6 +37,7 @@ public class MessengerClient {
     private int port;
     private String host;
     private User user;
+    private boolean running;
 
     /**
      * С каждым сокетом связано 2 канала in/out
@@ -72,6 +73,7 @@ public class MessengerClient {
         Socket socket = new Socket(host, port);
         in = socket.getInputStream();
         out = socket.getOutputStream();
+        running = true;
 
         /*
       Тред "слушает" сокет на наличие входящих сообщений от сервера
@@ -79,7 +81,7 @@ public class MessengerClient {
         Thread socketListenerThread = new Thread(() -> {
             final byte[] buf = new byte[1024 * 64];
             log.info("Starting listener thread...");
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && running) {
                 try {
                     // Здесь поток блокируется на ожидании данных
                     int read = in.read(buf);
@@ -95,6 +97,7 @@ public class MessengerClient {
                     Thread.currentThread().interrupt();
                 }
             }
+            System.out.println("exit onMessage");
         });
 
         socketListenerThread.start();
@@ -199,11 +202,6 @@ public class MessengerClient {
                 chathist.setId(Long.valueOf(tokens[1]));
                 send(chathist);
                 break;
-            case "/quit":
-                Quit quit = new Quit(user);
-                quit.setType(Type.MSG_QUIT);
-                send(quit);
-                break;
             case "/register":
                 Registration registration = new Registration();
                 registration.setType(Type.MSG_REGISTER);
@@ -225,9 +223,7 @@ public class MessengerClient {
         out.flush(); // принудительно проталкиваем буфер с данными
     }
 
-    public void close() {
 
-    }
 
     public static void main(String[] args) throws Exception {
 
@@ -242,9 +238,11 @@ public class MessengerClient {
             // Цикл чтения с консоли
             Scanner scanner = new Scanner(System.in);
             System.out.println("$");
-            while (true) {
+            while (client.isRunning()) {
                 String input = scanner.nextLine();
                 if ("q".equals(input)) {
+                    client.close();
+                    System.out.println("exit processInput");
                     return;
                 }
                 try {
@@ -261,5 +259,14 @@ public class MessengerClient {
                 client.close();
             }
         }
+    }
+
+    public void close() {
+        running = false;
+    }
+
+
+    public boolean isRunning() {
+        return running;
     }
 }

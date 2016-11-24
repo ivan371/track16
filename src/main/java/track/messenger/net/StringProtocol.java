@@ -38,6 +38,10 @@ public class StringProtocol implements Protocol {
                 logMsg.setPassword(tokens[2]);
                 logMsg.setType(type);
                 return logMsg;
+            case MSG_QUIT:
+                LoginMessage quitMsg = new LoginMessage();
+                quitMsg.setType(type);
+                return quitMsg;
             default:
                 throw new ProtocolException("Invalid type: " + type);
         }
@@ -56,9 +60,12 @@ public class StringProtocol implements Protocol {
                 break;
             case MSG_LOGIN:
                 LoginMessage loginMessage = (LoginMessage) msg;
-                builder.append(String.valueOf(loginMessage.getSenderId())).append(DELIMITER);
                 builder.append(loginMessage.getUsername()).append(DELIMITER);
                 builder.append(loginMessage.getPassword()).append(DELIMITER);
+                break;
+            case MSG_QUIT:
+                TextMessage quitMessage = (TextMessage) msg;
+                builder.append(String.valueOf(quitMessage.getSenderId())).append(DELIMITER);
                 break;
             default:
                 throw new ProtocolException("Invalid type: " + type);

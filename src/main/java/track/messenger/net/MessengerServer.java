@@ -32,10 +32,13 @@ public class MessengerServer {
             serverSocket = new ServerSocket(port);
             System.out.println("Waiting...");
             listen();
-            while (true) {
+            while (running) {
                 Session session = sessions.take();
                 Message msg = session.getMessage();
                 System.out.println(msg);
+                if(msg == null) {
+                    stop();
+                }
             }
         } catch (IOException e) {
             System.out.println(e.toString());
